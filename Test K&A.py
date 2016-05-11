@@ -407,7 +407,7 @@ class KingAndAssassinsClient(game.GameClient):
             deltacolu = start[1] - finish[1]
 
             i = 0
-            
+
             directions = []
 
 
@@ -436,8 +436,9 @@ class KingAndAssassinsClient(game.GameClient):
                 # Faire converger tout les villageois vers le roi
                 posKing = findPos('king')
                 i = 0
-                while i < APvillage :
-
+                while i < APvillage:
+                    Goto()
+                    # Fonction a modifier
                 # Des qu'un villageois est dans un cercle restreint du roi il se révele et l'attaque
                 # Tuer les chevalier dans le coin haut gauche
 
