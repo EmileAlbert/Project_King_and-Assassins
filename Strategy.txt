@@ -1,0 +1,21 @@
+Des que possible tu arrete
+Tjs le meme chemin pour le roi ( peut etre juste 2 differents )
+
+
+Village
+- un assassin pres du chateau (2,1)
+- un dans le coin 7,1 ou 8,3 si le roi pars a gauche
+- un en 1,7 si le roi pars tout droit
+- un sur le toit en 5, 5
+ramener pour le faire bloc
+
+Roi
+- virer le toit central
+- arreter le vllageois en 2,1
+
+- si le roi est pas touche, tu colle
+- si roi touché tu laisse un case libre et tu arrete le villageois si 5 PA
+
+Probalité des PA suivants
+
+Pour choisir les assasins : fct findPos inverse
