@@ -3,6 +3,7 @@
 # Author: Sébastien Combéfis
 # Version: April 29, 2016
 
+from random import randint
 import argparse
 import json
 import random
@@ -10,8 +11,6 @@ import socket
 import sys
 
 from lib import game
-
-# Noms des chevaliers ?
 
 global TURN
 TURN = -1
@@ -347,7 +346,7 @@ class KingAndAssassinsClient(game.GameClient):
             if KA_INITIAL_STATE['king'] == 'healthy' :
                 space = kingSpace('healthy')
                 for n in space :
-                    if PEOPLE[n[0], n[1]] in POPULATION :
+                    if state['people'][n[0], n[1]] in POPULATION :
                         return True
 
                     else :
@@ -356,7 +355,7 @@ class KingAndAssassinsClient(game.GameClient):
             if KA_INITIAL_STATE['king'] == 'injured' :
                 space = kingSpace('injured')
                 for n in space :
-                    if PEOPLE[n[0], n[1]] in POPULATION :
+                    if state['people'][n[0], n[1]] in POPULATION :
                         return True
 
                     else :
@@ -402,15 +401,38 @@ class KingAndAssassinsClient(game.GameClient):
 
             return knightarround
 
-        def Goto(start, finish, PA) :
+        def Goto(start, finish, direction):
             deltaline = start[0] - finish[0]
             deltacolu = start[1] - finish[1]
 
-            i = 0
 
-            directions = []
+            pathv = []
+            for n in range(start[0], finish[0]) :
+                pathv.append(n)
+            pathh = []
+            for n in range(start[1], finish[1]) :
+                pathh.append(n)
+
+            if pathv[0] == 'G' and pathv[1] == 'R' :
+                APv = 2
+            else:
+                APv = 1
+            if pathh[0] == 'G' and pathh[1] == 'R' :
+                APh = 2
+            else:
+                APh = 1
 
 
+            # Horizontal move
+            if deltaline < 0 and direction == 'V':
+                return -deltaline, 'N', APv
+            elif deltaline > 0 and direction == 'V':
+                return deltaline, 'S', APv
+            # Vertical move
+            elif deltacolu < 0 and direction == 'H':
+                return -deltacolu, 'E', APh
+            elif deltacolu < 0 and direction == 'H':
+                return deltacolu, 'W', APh
 
         # Initializing turn _ Choice of assassins
         if state['card'] is None:
@@ -419,7 +441,10 @@ class KingAndAssassinsClient(game.GameClient):
             global path
             path = kingPath
 
-            return json.dumps({'assassins': [findCharacter((7, 1)), findCharacter((5, 5)), findCharacter((2, 1))]},
+            global assassins
+            assassins = [findCharacter((7, 1)), findCharacter((5, 5)), findCharacter((2, 1))]
+
+            return json.dumps({'assassins': assassins},
                               separators=(',', ':'))
 
         # Others turns
@@ -431,37 +456,58 @@ class KingAndAssassinsClient(game.GameClient):
 
             # Play on the villagers side
             if self._playernb == 0:
-                actionslist = []
+                actionslistvillage = []
 
-                # Faire converger tout les villageois vers le roi
+                # Faire converger tout les villageois vers le roi et l'assasin le plus proche vers le roi
                 posKing = findPos('king')
                 i = 0
                 while i < APvillage:
-                    Goto()
-                    # Fonction a modifier
-                # Des qu'un villageois est dans un cercle restreint du roi il se révele et l'attaque
-                # Tuer les chevalier dans le coin haut gauche
+                    min = 100
+                    global char
+                    char = 0
+                    for n in assassins :
+                        res = abs(Goto(findPos(n), findPos('king'), 'H')[0]) + abs(Goto(findPos(n), findPos('king'), 'V')[0])
+                        if res < min:
+                            char = n
 
-                return json.dumps({'actions': actionslist}, separators=(',', ':'))
+                    dir = ['H', 'V']
+                    var = Goto(findPos(char),findPos('king'), dir[randint(0, 1)])
+                    actionslistvillage.append(('move', findPos(char), var[1]))
+                    i += var[2]
 
+                    var2 = Goto(findPos(villager[randint(0, 11)]), findPos('king'), dir[randint(0, 1)])
+                    actionslistvillage.append((('move'), findPos('king'), var2[1]))
+                    i += var2[2]
 
+                    if i < APvillage - 2:
+                        goal = kingSpace('healthy')
+                        for n in assassins:
+                            if findPos(n) in goal:
+                                actionslistvillage.append(('reveal', findPos(n)))
+                                actionslistvillage.append(('attack', findPos(n), '??????'))
+                                i += 2
+
+                    # ( Tuer les chevalier dans le coin haut gauche )
+
+                return json.dumps({'actions': actionslistvillage}, separators=(',', ':'))
 
             # Play on the king side
             else:
                 posKing = findPos('king')
-                actionslist = []
+                actionslistking = []
                 # Knight's moves
 
-                #Suivre le roi
-                #Arreter des que possible
-                #Gestion des assasins révelés
+                # Suivre le roi
+                #   --> Goto posking[0 ou 1] +- 1
+                # Arreter des que possible
+                # Gestion des assasins révelés ?
 
                 posKnights = findPos('knight')  # List of knights' position
                 knightarround = knightarround()
 
                 # King's moves
                 if not KingInDanger(path[0]):
-                    actionslist.append(('move', posKing, path[0]))
+                    actionslistking.append(('move', posKing, path[0]))
                     if path[0] == 'N':
                         global newpos
                         newpos = (posKing[0] + 1, posKing[1])
@@ -470,10 +516,10 @@ class KingAndAssassinsClient(game.GameClient):
                     del(path[0])
 
                 if APking == 2 and KingInDanger(path[0]) == False:
-                    actionslist.append(('move', newpos[0], newpos[1], path[0]))
+                    actionslistking.append(('move', newpos[0], newpos[1], path[0]))
                     del(path[0])
 
-                return json.dumps({'actions': actionslist}, separators=(',', ':'))
+                return json.dumps({'actions': actionslistking}, separators=(',', ':'))
 
 if __name__ == '__main__':
     # Create the top-level parser
